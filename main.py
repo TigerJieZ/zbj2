@@ -5,6 +5,7 @@ import sys
 from xlutils.copy import copy
 import os
 
+
 def check(s1, s2):
     return sum(map(lambda ch: s1.count(ch), s2))
 
@@ -60,10 +61,10 @@ def classify(article_list, keys_list):
         # 当前文章最佳分类的结果
         result = {}
         # 最佳分类的关键词及匹l'l
-        max_words=[]
+        max_words = []
         for keys in keys_list:
-            num=0
-            words=[]
+            num = 0
+            words = []
             for key in keys['keys']:
                 temp = {}
                 temp_num = 0
@@ -75,7 +76,8 @@ def classify(article_list, keys_list):
                 words.append(temp)
             if max_num < num:
                 max_words = words
-        # print('--------------')
+
+                # print('--------------')
                 max_num = num
                 result = keys.copy()
 
@@ -119,7 +121,7 @@ def write_result(file, zt_list):
     sheet = new_excel.get_sheet(0)
     for i in range(0, nrows):
         try:
-            sheet.write(i, 3, str(zt_list[i]['id'])+zt_list[i]['title'])
+            sheet.write(i, 3, str(zt_list[i]['id']) + zt_list[i]['title'])
             word_text = ""
             for word in zt_list[i]['words']:
                 word_text += word['word'] + ":" + str(word['num']) + ";"
@@ -134,10 +136,10 @@ def write_result(file, zt_list):
 if __name__ == '__main__':
     for path in os.listdir('C:/excel/'):
         if path.split('.')[-1] == 'xls':
-            article_list = load_excel('C:/excel/'+path)
+            article_list = load_excel('C:/excel/' + path)
             # keys_list_ = load_key('C:/excel/数据.xls')
             result_list = classify(article_list, keys_list_new)
-            write_result('C:/excel/'+path, result_list)
+            write_result('C:/excel/' + path, result_list)
 
     # article_list = load_excel('C:/excel/信息公开目录.xls')
     # # keys_list_ = load_key('C:/excel/数据.xls')
