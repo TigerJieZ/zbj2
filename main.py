@@ -4,6 +4,10 @@ import xlwt
 import sys
 from xlutils.copy import copy
 import os
+import utils
+import jieba
+import jieba.posseg
+import numpy as np
 
 
 def check(s1, s2):
@@ -43,7 +47,101 @@ def load_excel(filename):
     return article_list
 
 
-def classify(article_list, keys_list):
+def in_words(key, words):
+    """
+    判断key是否包含在words中的某个word中
+    :param key:
+    :param words:
+    :return:
+    """
+    for word in words:
+        try:
+            key.index(word['word'])
+            return True
+        except ValueError:
+            pass
+    return False
+
+
+def is_joint(word1, word2):
+    """
+    判断两个相邻word是否可lianjie
+    :param word1:
+    :param word2:
+    :return:
+    """
+
+    try:
+        word1.flag.index('n')
+        word2.flag.index('v')
+        return True
+    except ValueError:
+        pass
+
+    try:
+        word1.flag.index('a')
+        word2.flag.index('v')
+        return True
+    except ValueError:
+        pass
+
+    try:
+        word1.flag.index('n')
+        word2.flag.index('n')
+        return True
+    except ValueError:
+        pass
+
+    return False
+
+
+def rebuild(words):
+    """
+    重构分词列表
+    规则：名词+动词/形容词+动词/名词+名词
+    :param words:
+    :return:
+    """
+    new_words = []
+    is_skip = False
+    for i in range(len(words) - 1):
+        if is_skip:
+            is_skip = False
+            continue
+        if is_joint(words[i], words[i + 1]):
+            new_words.append(words[i].word + words[i + 1].word)
+            is_skip = True
+        else:
+            new_words.append(words[i].word)
+    return new_words
+
+
+def filter_keys(new_max_words, title):
+    """
+    根据题目筛选出合适的关键词
+    :param new_max_words:关键词列表
+    :param title:标题名
+    :return:
+    """
+
+    # result
+    result = []
+
+    # 对题目进行分词
+    words = list(jieba.posseg.cut(title))
+
+    # 对题目的分词结果重构，将符合连接规则的相邻词连接成新的词
+    words = rebuild(words)
+
+    # 筛选关键词，判断每个词是否在关键词列表中或者包含在某个关键词中，若是则判断该词为关键词
+    for word in words:
+        if new_max_words.count(word) > 0 or in_words(word, new_max_words):
+            result.append(word)
+
+    return result
+
+
+def classify(article_list, keys_list, index='keys'):
     """
     通过关键词对文章进行分类
     :param article_list: 文章列表
@@ -65,23 +163,29 @@ def classify(article_list, keys_list):
         for keys in keys_list:
             num = 0
             words = []
-            for key in keys['keys']:
-                temp = {}
-                temp_num = 0
-                temp_num += article['title'].count(key)
-                temp_num += article['content'].count(key)
-                temp['num'] = temp_num
-                temp['word'] = key
-                num += temp_num
-                words.append(temp)
-            if max_num < num:
-                max_words = words
+            try:
+                for key in keys[index]:
+                    temp = {}
+                    temp_num = 0
+                    temp_num += article['title'].count(key)
+                    # temp_num += article['content'].count(key)
+                    temp['num'] = temp_num
+                    temp['word'] = key
+                    num += temp_num
+                    words.append(temp)
+                if max_num < num:
+                    max_words = words
 
-                # print('--------------')
-                max_num = num
-                result = keys.copy()
+                    # print('--------------')
+                    max_num = num
+                    result = keys.copy()
+            except KeyError:
+                # print('no std key')
+                pass
 
         new_max_words = sort_keys(max_words)
+        # 从关键词中筛选出合适的
+        new_max_words = filter_keys(new_max_words, article['title'])
         if len(new_max_words) is 0:
             print('空')
         result['words'] = new_max_words
@@ -105,7 +209,7 @@ def sort_keys(words):
 
     for word in words:
         new_word = {}
-        # 如果该关键词匹配数大于1，则放入匹配结果关键词列表中
+        # 如果该关键词匹配数大于0，则放入匹配结果关键词列表中
         if word['num'] >= 1:
             new_word['num'] = word['num']
             new_word['word'] = word['word']
@@ -121,10 +225,10 @@ def write_result(file, zt_list):
     sheet = new_excel.get_sheet(0)
     for i in range(0, nrows):
         try:
-            sheet.write(i, 3, str(zt_list[i]['id']) + zt_list[i]['title'])
+            sheet.write(i, 3, str(zt_list[i]['id']) + zt_list[i]['content'])
             word_text = ""
             for word in zt_list[i]['words']:
-                word_text += word['word'] + ":" + str(word['num']) + ";"
+                word_text += word + ';'
             sheet.write(i, 6, word_text)
             i += 1
         except Exception as e:
@@ -134,11 +238,13 @@ def write_result(file, zt_list):
 
 
 if __name__ == '__main__':
+    EXTERSIONS = ['xls', 'xlsm', 'xlsx']
+    std_keys = utils.load_std_keys()
     for path in os.listdir('C:/excel/'):
-        if path.split('.')[-1] == 'xls':
+        if EXTERSIONS.count(path.split('.')[-1]) > 0:
             article_list = load_excel('C:/excel/' + path)
             # keys_list_ = load_key('C:/excel/数据.xls')
-            result_list = classify(article_list, keys_list_new)
+            result_list = classify(article_list, std_keys, index='std_key')
             write_result('C:/excel/' + path, result_list)
 
     # article_list = load_excel('C:/excel/信息公开目录.xls')
