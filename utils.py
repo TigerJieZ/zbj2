@@ -12,7 +12,7 @@ CATEGORY_TYPE_tc = 2
 CATEGORY_TYPE_gw = 3
 
 
-def load_category(filename='c:/excel/汇总.xls', sheet_index=2):
+def load_category(filename='c:/excel/汇总.xls', sheet_index=2, is_gw=False):
     """
     读取excel中主题分类的类别
     :param filename: excel文件路径
@@ -38,11 +38,12 @@ def load_category(filename='c:/excel/汇总.xls', sheet_index=2):
                              'content': sheet.cell(i, 0).value}
                 category_list1.append(category1)
         old_category = sheet.cell(i, 1).value
-        # 二级标题
-        if sheet.cell(i, 2).value != '':
-            category2 = {'id': sheet.cell(i, 3).value,
-                         'content': sheet.cell(i, 2).value}
-            category_list2.append(category2)
+        if not is_gw:
+            # 二级标题
+            if sheet.cell(i, 2).value != '':
+                category2 = {'id': sheet.cell(i, 3).value,
+                             'content': sheet.cell(i, 2).value}
+                category_list2.append(category2)
     return category_list1, category_list2
 
 
@@ -178,7 +179,8 @@ def filter_no_category(key_arr, category):
     return new_key_arr
 
 
-def load_standard_key(file='c:/excel - 副本/汇总 - 副本.xlsm', sheet_index=0, category_type=1, is_save=True, key_col=4):
+def load_standard_key(file='c:/excel - 副本/汇总 - 副本.xlsm', sheet_index=0, category_type=1, is_save=True, key_col=4,
+                      id_col=1):
     """
 
     :param file: excel文件路径
@@ -190,14 +192,11 @@ def load_standard_key(file='c:/excel - 副本/汇总 - 副本.xlsm', sheet_index
     """
 
     if category_type is CATEGORY_TYPE_zt:
-        # 获取主题分类的类目列表
-        category_list1, category_list2 = load_category(filename='c:/excel - 副本/汇总.xlsm')
-        # 合并两个类目列表
-        category_list_ = category_list2 + category_list1
-        id_col = 2
+        category_list_ = parse_zt()
     elif category_type is CATEGORY_TYPE_tc:
         category_list_ = parse_style()
-        id_col = 1
+    elif category_type is CATEGORY_TYPE_gw:
+        category_list_ = parse_gw()
     else:
         return
 
@@ -216,11 +215,13 @@ def load_standard_key(file='c:/excel - 副本/汇总 - 副本.xlsm', sheet_index
                     # 先对key分词'安全生产;规定;通知'
                     key_str = sheet.cell(i, key_col).value
                     if category_type is CATEGORY_TYPE_tc:
-                        key_arr = [key_str.split(';')[-1]]
+                        key_arr = key_str.split(';')
                     elif category_type is CATEGORY_TYPE_zt:
                         key_arr = key_str.split(';')
                         # 去除非主题分类的关键词和已存入的关键词
                         key_arr = filter_no_category(key_arr, category)
+                    elif category_type is CATEGORY_TYPE_gw:
+                        key_arr = key_str.split(';')
                     else:
                         return
                     try:
@@ -644,7 +645,20 @@ def write_result(file, zt_list):
     new_excel.save(file)
 
 
-def parse_style(filename='I:/Tencent Files/1700117425/FileRecv/数据.xls'):
+def parse_zt(filename='D:/zbj2/data_std/数据.xls'):
+    """
+    解析文件中的主题分类类目
+    :param filename:
+    :return:
+    """
+    (category_list1, category_list2) = load_category(filename, sheet_index=1)
+    # 合并两个类目列表
+    category_list_ = category_list2 + category_list1
+    del category_list1, category_list2
+    return category_list_
+
+
+def parse_style(filename='D:/zbj2/data_std/数据.xls'):
     """
     解析文件中的体裁分类类目
     :param filename:
@@ -654,6 +668,29 @@ def parse_style(filename='I:/Tencent Files/1700117425/FileRecv/数据.xls'):
     style_list = style_list1 + style_list2
     del style_list1, style_list2
     return style_list
+
+
+def parse_gw(filename='D:/zbj2/data_std/数据.xls'):
+    """
+    解析文件中的公文分类类目
+    :param filename:
+    :return:
+    """
+    (gw_list1, gw_list2) = load_category(filename, sheet_index=3, is_gw=True)
+    del gw_list2
+    return gw_list1
+
+
+def load_all_key(file='D:/zbj2/data_std/数据分类.xlsx'):
+    print(load_standard_key(file=file,
+                            category_type=CATEGORY_TYPE_tc,
+                            is_save=False, key_col=3, sheet_index=0, id_col=1))
+    print(load_standard_key(file=file,
+                            category_type=CATEGORY_TYPE_zt,
+                            is_save=False, key_col=3, sheet_index=1, id_col=1))
+    print(load_standard_key(file=file,
+                            category_type=CATEGORY_TYPE_gw,
+                            is_save=False, key_col=3, sheet_index=2, id_col=1))
 
 
 if __name__ == '__main__':
@@ -669,4 +706,7 @@ if __name__ == '__main__':
     # load_standard_key()
     # filter_no_key()
     # print(parse_style())
-    print(load_standard_key(file='I:/Tencent Files/1700117425/FileRecv/数据样例.xlsx', category_type=CATEGORY_TYPE_tc, is_save=False,key_col=7))
+    # print(load_standard_key(file='I:/Tencent Files/1700117425/FileRecv/数据样例.xlsx', category_type=CATEGORY_TYPE_tc,
+    # is_save=False, key_col=7))
+
+    load_all_key()
