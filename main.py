@@ -24,27 +24,26 @@ def load_key(filename):
     return keys_list
 
 
-def load_excel(filename):
-    ExcelFile = xlrd.open_workbook(filename)
-    sheet = ExcelFile.sheet_by_index(0)
-    article_list = []
-    for i in range(0, sheet.nrows):
-        article = {}
-        article['title'] = sheet.cell(i, 0).value
-        article['content'] = str(sheet.cell(i, 5).value)
-        article_list.append(article)
-    return article_list
+def load_excel(filename: str, sheet_index: int, title_col: int):
+    excel_file = xlrd.open_workbook(filename)
+    sheet = excel_file.sheet_by_index(sheet_index)
+    article_list_ = []
+    for i in range(1, sheet.nrows):
+        article = {'title': sheet.cell(i, title_col).value}
+        article_list_.append(article)
+    return article_list_
 
 
 if __name__ == '__main__':
     EXTERSIONS = ['xls', 'xlsm', 'xlsx']
     std_keys = utils.load_std_keys()
-    for path in os.listdir('C:/excel/'):
+    dir_ = 'F:/pycharm/zbj2/test_data/'
+    for path in os.listdir(dir_):
         if EXTERSIONS.count(path.split('.')[-1]) > 0:
-            article_list = load_excel('C:/excel/' + path)
+            article_list = load_excel(dir_ + path, sheet_index=1, title_col=0)
             # keys_list_ = load_key('C:/excel/数据.xls')
             result_list = utils.classify_subject(article_list, std_keys, index='std_key')
-            utils.write_result('C:/excel/' + path, result_list)
+            utils.write_result(dir_ + path, result_list, w_key_col=5, sheet_index=1, w_id_col=4)
 
     # article_list = load_excel('C:/excel/信息公开目录.xls')
     # # keys_list_ = load_key('C:/excel/数据.xls')

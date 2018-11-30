@@ -132,7 +132,6 @@ def classify_subject(article_list, keys_list, index='keys'):
                     temp = {}
                     temp_num = 0
                     temp_num += article['title'].count(key)
-                    temp_num += article['content'].count(key)
                     temp['num'] = temp_num
                     temp['word'] = key
                     num += temp_num
@@ -621,14 +620,14 @@ def in_words(key, words):
     return False
 
 
-def write_result(file, zt_list):
-    ExcelFile = xlrd.open_workbook(file)
-    nrows = ExcelFile.sheet_by_index(0).nrows
-    new_excel = copy(ExcelFile)
-    sheet = new_excel.get_sheet(0)
-    for i in range(0, nrows):
+def write_result(file, zt_list, w_key_col: int, w_id_col: int, sheet_index: int):
+    excel_file = xlrd.open_workbook(file)
+    nrows = excel_file.sheet_by_index(sheet_index).nrows
+    new_excel = copy(excel_file)
+    sheet = new_excel.get_sheet(sheet_index)
+    for i in range(1 , nrows):
         try:
-            sheet.write(i, 3, str(zt_list[i]['id']) + zt_list[i]['content'])
+            sheet.write(i, w_id_col, str(zt_list[i]['id']) + zt_list[i]['content'])
             word_text = ""
             for word in zt_list[i]['words']:
                 # 关键词不能以内蒙古自治区开头
@@ -636,7 +635,7 @@ def write_result(file, zt_list):
                     word.index('内蒙古自治区')
                 except:
                     word_text += word + ';'
-            sheet.write(i, 6, word_text)
+            sheet.write(i, w_key_col, word_text)
             i += 1
         except Exception as e:
             s = sys.exc_info()
@@ -669,4 +668,5 @@ if __name__ == '__main__':
     # load_standard_key()
     # filter_no_key()
     # print(parse_style())
-    print(load_standard_key(file='I:/Tencent Files/1700117425/FileRecv/数据样例.xlsx', category_type=CATEGORY_TYPE_tc, is_save=False,key_col=7))
+    print(load_standard_key(file='I:/Tencent Files/1700117425/FileRecv/数据样例.xlsx', category_type=CATEGORY_TYPE_tc,
+                            is_save=False, key_col=7))
